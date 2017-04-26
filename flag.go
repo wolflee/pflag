@@ -150,6 +150,7 @@ type FlagSet struct {
 	args              []string // arguments after flags
 	argsLenAtDash     int      // len(args) when a '--' was located when parsing, or -1 if no --
 	errorHandling     ErrorHandling
+	terminator        string
 	output            io.Writer // nil means stderr; use out() accessor
 	interspersed      bool      // allow interspersed option/non-option args
 	normalizeNameFunc func(f *FlagSet, name string) NormalizedName
@@ -961,6 +962,12 @@ func (f *FlagSet) parseShortArg(s string, args []string, fn parseFunc) (a []stri
 	return
 }
 
+// SetTerminator uses a specific flag as termintor, when parsing arguments,
+// storing all args after terminator as one single arg and terminate parsing.
+func (f *FlagSet) SetTerminator(t string) {
+	f.terminator = t
+}
+
 func (f *FlagSet) parseArgs(args []string, fn parseFunc) (err error) {
 	for len(args) > 0 {
 		s := args[0]
@@ -982,6 +989,10 @@ func (f *FlagSet) parseArgs(args []string, fn parseFunc) (err error) {
 				break
 			}
 			args, err = f.parseLongArg(s, args, fn)
+		} else if strings.EqualFold(s, f.terminator) {
+			f.argsLenAtDash = len(f.args)
+			f.args = append(f.args, args...)
+			break
 		} else {
 			args, err = f.parseShortArg(s, args, fn)
 		}
